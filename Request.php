@@ -10,8 +10,8 @@
                         ->execute(); */
 /**
  * @author Alberto Sanchez - ww.as-wm.com
- * @Version V1.0.0
- *
+ * @version 1.0.0
+ * 
  * La presente clase puede utilizarse para cualquier proyecto
  * la misma recibe en el metodo all(), 2 parametros: la conexion a la base de datos
  * y el nombre de la tabla a buscar (ver ejemplo de arriba).
@@ -21,7 +21,6 @@
  * Los metodos que no tiene comentarios es necesario invocarlos.
  *  
  */
-
 
 class Request {
     protected static $instance;
@@ -105,15 +104,7 @@ class Request {
                 $e=0;
                 for ($i=0; $i < count($this->joinTable); $i++)
                 { 
-                    if(!empty($this->tableAlias))
-                    /* {
-                        if($e+1 <= count($this->tableAlias))
-                        {
-                            $this->sql .= " JOIN ".$this->tableAlias[$i].".".$this->joinTable[$i];    
-                            $e++;
-                        }                    
-                    }
-                    else */
+                    if(!empty($this->tableAlias))                    
                     {
                         if($e < 1)
                         {
@@ -123,12 +114,7 @@ class Request {
                             $this->sql .= ".".$this->where[$i+1];    
                             $e++;
                         }
-                        /* else
-                        {
-                            $this->sql .= " JOIN ".$this->joinTable[$i+1]." AS ".$this->joinTableAlias[$i+1];    
-                            $this->sql .= " ON ".$this->tableAlias.".".$this->where[$i+1];    
-                            $this->sql .= " = ".$this->joinTableAlias[$i+1];
-                        } */
+                        
                         if($i < count($this->joinTable)-1)
                         {
                             $this->sql .= " JOIN ".$this->joinTable[$i+1]." AS ".$this->joinTableAlias[$i+1];       
@@ -145,19 +131,7 @@ class Request {
                             $this->sql .= " = ".$this->joinTableAlias[$i+1];
                             $this->sql .= ".".$this->where[$i];    
                         }
-                        else
-                        {
-                            
-                        }
-                        
-                    }
-
-                    
-                    // Verifica si es el ultimo elemento del array.
-                    /* if($i+1 < count($this->joinTable))
-                    {
-                       $this->sql .= " ON ".$this->joinTableAlias[$i].".".$this->tableAlias;
-                    } */
+                    }    
                 }
             }
             else
@@ -384,7 +358,6 @@ class Request {
     {   
         return $this->selectAll();               
     }
-
 
     # --------------------------------------------------
     # Evita que el objeto se pueda clonar
