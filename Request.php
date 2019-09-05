@@ -1,8 +1,10 @@
 <?php
 
 /* $event = $Request   ->all($conn,'smt_eventos')                                                                        
-                        ->join('smt_descripcion_evento')
                         ->joinTableAlias('tt')
+                        ->join('smt_descripcion_evento')
+            (alternar)  ->branch([['id_ctg_tipo_evento','id'],['id_ctg_subtipo_evento','id'],['id','id_evento']])
+            (alternar)  ->bind([['id','id_evento'],['id_servicio_evento','id']])
                         ->where(['id','id_evento'])                        
                         ->search('bani',['ciudad'])
                         ->orderBy(['alias.campo','ASC'])
@@ -10,7 +12,7 @@
                         ->execute(); */
 /**
  * @author Alberto Sanchez - ww.as-wm.com
- * @version 1.0.0
+ * @version 1.2.0
  * 
  * La presente clase puede utilizarse para cualquier proyecto
  * la misma recibe en el metodo all(), 2 parametros: la conexion a la base de datos
@@ -31,6 +33,8 @@ class Request {
     protected $joinTable;
     protected $joinTableAlias;
     protected $where;
+    protected $arrayBranch;
+    protected $arrayBind;
     protected $filter;
     protected $orderBy;
     protected $tableAliasForOrderBy;
@@ -41,7 +45,7 @@ class Request {
     protected $searchField;
     
     protected $tableName;
-    /* protected $tableAlias; */
+        protected $tableAlias;
         protected $fieldName;    
             protected $id; 
 
@@ -75,6 +79,11 @@ class Request {
     protected function selectAll()
     {              
         
+        if(empty($this->tableAlias))
+        {
+            $this->tableAlias = 'tn';
+        }
+
         $this->sql = "SELECT ";        
 
         if ($this->fieldName)
@@ -97,21 +106,64 @@ class Request {
         $this->sql .= " FROM ".$this->tableName." AS tn"; 
         
 
-        if($this->joinTable)
+        if($this->joinTable or is_array($this->joinTable))
         {
             if( is_array($this->joinTable) and is_array($this->joinTableAlias) )
             {
-                $e=0;
-                for ($i=0; $i < count($this->joinTable); $i++)
-                { 
-                    if(!empty($this->tableAlias))                    
-                    {
+                if(is_array($this->arrayBranch))
+                {
+                    $e=0;
+                    for ($i=0; $i < count($this->joinTable); $i++)
+                    { 
+                        if(!empty($this->joinTableAlias))                    
+                        {
+                            if($e < count($this->arrayBranch))
+                            {
+                                $this->sql .= " JOIN ".$this->joinTable[$i]." AS ".$this->joinTableAlias[$i];    
+                                $this->sql .= " ON tn.".$this->arrayBranch[$i][0];    
+                                $this->sql .= " = ".$this->joinTableAlias[$i];
+                                $this->sql .= ".".$this->arrayBranch[$i][1];    
+                                $e++;
+                            }
+                        }    
+                    }
+                }
+                else if(is_array($this->arrayBind))
+                {
+                    $e=0; $u=0;
+                    for ($i=0; $i < count($this->joinTable); $i++)
+                    { 
+                        if(!empty($this->joinTableAlias))                    
+                        {
+
+                            if($u < 1)
+                            {
+                                $this->sql .= " JOIN ".$this->joinTable[$i]." AS ".$this->joinTableAlias[$i];    
+                                $this->sql .= " ON ".$this->tableAlias.".".$this->arrayBind[0][0];    
+                                $this->sql .= " = ".$this->joinTableAlias[$i].".".$this->arrayBind[0][1];    
+                                $u++;
+                            }
+
+                            if($e+1 < count($this->arrayBind))
+                            {
+                                $this->sql .= " JOIN ".$this->joinTable[$i+1]." AS ".$this->joinTableAlias[$i+1];    
+                                $this->sql .= " ON ".$this->joinTableAlias[$i].".".$this->arrayBind[$u][$i];    
+                                $this->sql .= " = ".$this->joinTableAlias[$i+1].".".$this->arrayBind[$u][$i+1];    
+                                $e++;
+                            }
+                        }    
+                    }
+                }  
+                else
+                {
+                    $e=0;
+                    for ($i=0; $i < count($this->joinTable); $i++)
+                    {   
                         if($e < 1)
                         {
                             $this->sql .= " JOIN ".$this->joinTable[$i]." AS ".$this->joinTableAlias[$i];    
                             $this->sql .= " ON ".$this->tableAlias.".".$this->where[$i];    
-                            $this->sql .= " = ".$this->joinTableAlias[$i];
-                            $this->sql .= ".".$this->where[$i+1];    
+                            $this->sql .= " = ".$this->joinTableAlias[$i].".".$this->where[$i+1];    
                             $e++;
                         }
                         
@@ -128,11 +180,12 @@ class Request {
                                     $this->sql .= " WHERE ".$this->joinTableAlias[$i].".".$this->tableAlias;
                                     
                                 }
-                            $this->sql .= " = ".$this->joinTableAlias[$i+1];
-                            $this->sql .= ".".$this->where[$i];    
+                            $this->sql .= " = ".$this->joinTableAlias[$i+1].".".$this->where[$i];    
                         }
-                    }    
+                            
+                    }
                 }
+            
             }
             else
             {
@@ -140,18 +193,22 @@ class Request {
             }
 
 
-            if($this->toSearch)
+            if(!empty($this->toSearch))
             {
                          
-                if($this->where)
+                if(is_array($this->where) or is_array($this->arrayBranch))
                 {    
                     if(is_array($this->where))
                     {
-                        $this->sql .= " ON tn.id = ".$this->joinTableAlias.".".$this->where[1]." WHERE ";
+                        $this->sql .= " ON ".$this->tableAlias.".id = ".$this->joinTableAlias.".".$this->where[1]." WHERE ";
+                    }                    
+                    else if (is_array($this->arrayBranch))
+                    {
+                        $this->sql .= " WHERE ";                        
                     }
                     else
                     {
-                        $this->sql .= " ON tn.id = ".$this->joinTableAlias.".".$this->where." WHERE ";                        
+                        $this->sql .= " ON ".$this->tableAlias.".id = ".$this->joinTableAlias.".".$this->where." WHERE ";                        
                     }
                     // Si es un array incluir alias de campo.
                     if (is_array($this->searchField))
@@ -174,18 +231,20 @@ class Request {
                         $this->sql .= " LIKE '%".$this->toSearch."%'";
                     }
                 }    
-            }                
+            }            
         }
         
         if(empty($this->toSearch))
         {           
+            
             if ( is_array($this->where) and !is_array($this->joinTableAlias) )
             {
-                $this->sql .= " WHERE tn.id = ".$this->joinTableAlias.".".$this->where[1];
+                $this->sql .= " WHERE ".$this->tableAlias.".".$this->where[0]." = "; echo ($this->joinTableAlias) ? $this->joinTableAlias."." : '';
+                $this->sql .= $this->where[1];
             }
             else if (is_array($this->where))
             {
-                $this->sql .= " WHERE tn.".$this->where[0]." = ".$this->where[1];
+                $this->sql .= " WHERE ".$this->tableAlias.".".$this->where[0]." = ".$this->where[1];
             }            
             
             if($this->filter)
@@ -217,24 +276,31 @@ class Request {
                 $this->sql .= " LIMIT $this->startPositionOrLenght";
                 $this->sql .= ", $this->endLimitOrLenght";
             }
+            else if(empty($this->startPositionOrLenght))
+            {
+                $this->sql .= " LIMIT 1000";
+            }
             else
             {
-                $this->sql .= " LIMIT $this->startPositionOrLenght";
+                $this->sql .= " LIMIT ".$this->startPositionOrLenght;
             }       
         }
 
+        
+        
         return $this->statement(); 
         // Para visualizar el objeto cambiar por return $this y recibir con var_dump()
         //return $this;               
     }
+
+//---------------------------------------------------------------------------------------
 
     // recibe un parametro que indica la cantidad de registros a devolver de la tabla.
     // o un array que indica la posicion inicial que mostrara de la tabla
     // y la cantidad de registros a mostrar 
     // Ejemplo: [5,10] muestra 10 registro empezando en la posicion 5.
     public function limit($startNumber = 1000,$endNumber = null)
-    {
-        
+    {        
         $this->startPositionOrLenght = $startNumber;
         $this->endLimitOrLenght = $endNumber;
         return $this;        
@@ -242,13 +308,36 @@ class Request {
 
     // recibe un array, con el nombre del campo y el valor a buscar.
     // si joinTableAlias es un array, where() recibe un array con  los nombre de campos
-    // escritos en el array join()
+    // escritos en el array join().
+    // Where hace referencia a la primera tabla de la consulta.
     public function where($fieldName = null)
     {
         $this->where = $fieldName;
         return $this;        
     }
-        
+
+    // crea una consulta ramificada <-<->-> desde la primera tabla a otras tablas.
+    // recibe un array con multiples arrays [['campo1','campo2'],['campo1','campo2']],
+    // con el nombre del campo1 que pertenece a la tabla principal y nombre del campo2
+    // que pertenece a la segunda tabla pasada por join()
+    // si joinTableAlias es un array, join() recibe un array con los nombre de campos    
+    public function branch($arraysFields = NULL)
+    {
+        $this->arrayBranch = $arraysFields;
+        return $this;        
+    }
+
+    // crea una consulta encadenada ->->->
+    // recibe un array con multiples arrays [['campo1','campo2'],['campo1','campo2']],
+    // con el nombre del campo1 que pertenece a la tabla principal y nombre del campo2
+    // que pertenece a la segunda tabla pasada por join()
+    // si joinTableAlias es un array, join() recibe un array con los nombre de campos 
+    public function bind($arraysFields = NULL)
+    {
+        $this->arrayBind = $arraysFields;
+        return $this;        
+    }
+
     public function filter($fieldName = null)
     {
         $this->filter = $fieldName;
@@ -356,6 +445,7 @@ class Request {
 
     public function execute()
     {   
+        
         return $this->selectAll();               
     }
 
@@ -365,3 +455,4 @@ class Request {
         trigger_error('La clonación de este objeto no está permitida', E_USER_ERROR);
     }
 }
+
